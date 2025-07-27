@@ -179,7 +179,10 @@ require('lazy').setup({
     dependencies = {
       { 'williamboman/mason.nvim', config = true },
       'williamboman/mason-lspconfig.nvim',
-      { 'hrsh7th/cmp-nvim-lsp', commit = '39e2eda76828d88b773cc27a3f61d2ad782c922d' }, -- Oct 2024
+      {
+        'vicnotor/cmp-nvim-lsp',
+        branch = 'client.is_stopped-deprecated',
+      },
       {
         'hrsh7th/nvim-cmp',
         dependencies = {
@@ -333,10 +336,6 @@ require('lazy').setup({
           show_status = true,
           timeout = 300000,
           disable_on_focus = true,
-        },
-        text = {
-          editing = 'Editing %s',
-          workspace = 'In %s',
         },
         -- Flatpak Vesktop compatibility
         discord = {
