@@ -76,13 +76,39 @@ require('lazy').setup({
     'folke/which-key.nvim',
     event = 'VimEnter',
     opts = {
-      icons = { mappings = vim.g.have_nerd_font, keys = vim.g.have_nerd_font and {} or {
-        Up = '<Up> ', Down = '<Down> ', Left = '<Left> ', Right = '<Right> ', C = '<C-…> ', M = '<M-…> ',
-        D = '<D-…> ', S = '<S-…> ', CR = '<CR> ', Esc = '<Esc> ', ScrollWheelDown = '<ScrollWheelDown> ',
-        ScrollWheelUp = '<ScrollWheelUp> ', NL = '<NL> ', BS = '<BS> ', Space = '<Space> ', Tab = '<Tab> ',
-        F1 = '<F1>', F2 = '<F2>', F3 = '<F3>', F4 = '<F4>', F5 = '<F5>', F6 = '<F6>', F7 = '<F7>',
-        F8 = '<F8>', F9 = '<F9>', F10 = '<F10>', F11 = '<F11>', F12 = '<F12>',
-      }},
+      icons = {
+        mappings = vim.g.have_nerd_font,
+        keys = vim.g.have_nerd_font and {} or {
+          Up = '<Up> ',
+          Down = '<Down> ',
+          Left = '<Left> ',
+          Right = '<Right> ',
+          C = '<C-…> ',
+          M = '<M-…> ',
+          D = '<D-…> ',
+          S = '<S-…> ',
+          CR = '<CR> ',
+          Esc = '<Esc> ',
+          ScrollWheelDown = '<ScrollWheelDown> ',
+          ScrollWheelUp = '<ScrollWheelUp> ',
+          NL = '<NL> ',
+          BS = '<BS> ',
+          Space = '<Space> ',
+          Tab = '<Tab> ',
+          F1 = '<F1>',
+          F2 = '<F2>',
+          F3 = '<F3>',
+          F4 = '<F4>',
+          F5 = '<F5>',
+          F6 = '<F6>',
+          F7 = '<F7>',
+          F8 = '<F8>',
+          F9 = '<F9>',
+          F10 = '<F10>',
+          F11 = '<F11>',
+          F12 = '<F12>',
+        },
+      },
       spec = {
         { '<leader>c', group = '[C]ode', mode = { 'n', 'x' } },
         { '<leader>d', group = '[D]ocument' },
@@ -153,13 +179,13 @@ require('lazy').setup({
     dependencies = {
       { 'williamboman/mason.nvim', config = true },
       'williamboman/mason-lspconfig.nvim',
-      'hrsh7th/cmp-nvim-lsp',
+      { 'hrsh7th/cmp-nvim-lsp', commit = '39e2eda76828d88b773cc27a3f61d2ad782c922d' }, -- Oct 2024
       {
         'hrsh7th/nvim-cmp',
         dependencies = {
-          'L3MON4D3/LuaSnip',
-          'saadparwaiz1/cmp_luasnip',
-          'hrsh7th/cmp-path',
+          { 'L3MON4D3/LuaSnip', tag = 'v2.4.0', run = 'make install_jsregexp' }, -- Latest v2 release
+          { 'saadparwaiz1/cmp_luasnip', commit = '05a9ab28b53f71d1aece421ef32fee2cb857a843' }, -- Oct 2024
+          { 'hrsh7th/cmp-path', commit = '91ff86cd9c29299a64f968ebb45846c485725f23' }, -- Oct 2024
         },
       },
       {
@@ -173,7 +199,14 @@ require('lazy').setup({
           },
         },
         keys = {
-          { '<leader>f', function() require('conform').format { async = true, lsp_format = 'fallback' } end, mode = '', desc = '[F]ormat buffer' },
+          {
+            '<leader>f',
+            function()
+              require('conform').format { async = true, lsp_format = 'fallback' }
+            end,
+            mode = '',
+            desc = '[F]ormat buffer',
+          },
         },
       },
     },
@@ -259,6 +292,8 @@ require('lazy').setup({
   },
   {
     'nvim-treesitter/nvim-treesitter',
+    branch = 'master',
+    lazy = false,
     build = ':TSUpdate',
     main = 'nvim-treesitter.configs',
     opts = {
@@ -268,12 +303,65 @@ require('lazy').setup({
       indent = { enable = true },
     },
   },
+  {
+    'vyfor/cord.nvim',
+    build = ':Cord update',
+    event = 'VimEnter',
+    config = function()
+      require('cord').setup {
+        usercmds = true,
+        log_level = 'error',
+        timer = {
+          interval = 1500,
+          debounce = 100,
+        },
+        editor = {
+          client = 'neovim',
+          tooltip = 'The One True Text Editor',
+        },
+        display = {
+          show_time = true,
+          show_repository = true,
+          show_cursor_position = false,
+        },
+        lsp = {
+          show_problem_count = true,
+          severity = 1,
+        },
+        idle = {
+          enable = true,
+          show_status = true,
+          timeout = 300000,
+          disable_on_focus = true,
+        },
+        text = {
+          editing = 'Editing %s',
+          workspace = 'In %s',
+        },
+        -- Flatpak Vesktop compatibility
+        discord = {
+          socket_path = os.getenv 'XDG_RUNTIME_DIR' .. '/.flatpak/dev.vencord.Vesktop/xdg-run/discord-ipc-0',
+        },
+      }
+    end,
+  },
   { import = 'custom.plugins' },
 }, {
   ui = {
     icons = vim.g.have_nerd_font and {} or {
-      cmd = '⌘', config = '🛠', event = '📅', ft = '📂', init = '⚙', keys = '🗝',
-      plugin = '🔌', runtime = '💻', require = '🌙', source = '📄', start = '🚀', task = '📌', lazy = '💤 ',
+      cmd = '⌘',
+      config = '🛠',
+      event = '📅',
+      ft = '📂',
+      init = '⚙',
+      keys = '🗝',
+      plugin = '🔌',
+      runtime = '💻',
+      require = '🌙',
+      source = '📄',
+      start = '🚀',
+      task = '📌',
+      lazy = '💤 ',
     },
   },
 })
