@@ -383,9 +383,9 @@ require('lazy').setup({
         build = 'make',
 
         -- `cond` is a condition used to determine whether this plugin should be
-        -- installed and loaded. Disabled on iSH (make may fail or be slow).
+        -- installed and loaded.
         cond = function()
-          return vim.fn.executable 'make' == 1 and not require('custom.env').ish_mode
+          return vim.fn.executable 'make' == 1
         end,
       },
       { 'nvim-telescope/telescope-ui-select.nvim' },
@@ -443,10 +443,7 @@ require('lazy').setup({
       require('telescope').setup(telescope_opts)
 
       -- Enable Telescope extensions if they are installed
-      -- Only load fzf extension on non-iSH systems
-      if not env.ish_mode then
-        pcall(require('telescope').load_extension, 'fzf')
-      end
+      pcall(require('telescope').load_extension, 'fzf')
       pcall(require('telescope').load_extension, 'ui-select')
 
       -- See `:help telescope.builtin`

@@ -10,12 +10,11 @@ return {
     cond = not env.ish_mode,
   },
 
-  -- snacks.nvim: Disable on iSH (lazygit/terminal features may not work well)
+  -- snacks.nvim: Terminal and lazygit integration
   {
     'folke/snacks.nvim',
     priority = 1000,
     lazy = false,
-    cond = not env.ish_mode,
     ---@type snacks.Config
     opts = {
       quickfile = { enabled = true },
@@ -40,12 +39,11 @@ return {
     },
   },
 
-  -- molten-nvim: Disable on iSH (Jupyter won't work)
+  -- molten-nvim: Jupyter notebook support
   {
     'benlubas/molten-nvim',
     version = '^1.0.0',
     build = ':UpdateRemotePlugins',
-    cond = not env.ish_mode,
   },
 
   -- autopairs: Keep (lightweight)
@@ -97,17 +95,15 @@ return {
     end,
   },
 
-  -- 42header: Disable on iSH (not needed)
+  -- 42header: 42 School header generator
   {
     '42paris/42header',
-    cond = not env.ish_mode,
   },
 
-  -- indent-blankline: Disable on iSH (performance impact)
+  -- indent-blankline: Indentation guides
   {
     'lukas-reineke/indent-blankline.nvim',
     main = 'ibl',
-    cond = not env.ish_mode,
     ---@module "ibl"
     ---@type ibl.config
     opts = {
