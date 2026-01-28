@@ -93,6 +93,10 @@ vim.g.maplocalleader = ' '
 -- Set to true if you have a Nerd Font installed and selected in the terminal
 vim.g.have_nerd_font = true
 
+-- Load environment detection (iSH shell on iPad, etc.)
+local env = require('custom.env')
+vim.g.is_ish = env.ish_mode
+
 -- [[ Setting options ]]
 -- See `:help vim.opt`
 -- NOTE: You can change these options as you wish!
@@ -156,6 +160,19 @@ vim.opt.cursorline = true
 
 -- Minimal number of screen lines to keep above and below the cursor.
 vim.opt.scrolloff = 3
+
+-- iSH-specific performance optimizations
+if vim.g.is_ish then
+  vim.opt.updatetime = 1000 -- Slower update for limited hardware (vs 250)
+  vim.opt.timeoutlen = 500 -- More time for key sequences (vs 300)
+  vim.opt.cursorline = false -- Disable cursorline (expensive redraw)
+  vim.opt.scrolloff = 1 -- Less scrolloff for less redrawing
+  vim.opt.mouse = '' -- Disable mouse (unnecessary on iPad with keyboard)
+  vim.opt.listchars = { tab = '> ', trail = '.', nbsp = '+' } -- Simpler chars
+  vim.opt.redrawtime = 500 -- Reduce redrawtime for syntax highlighting
+  vim.opt.foldenable = false -- Disable folding by default
+  vim.opt.lazyredraw = true -- Lazy redraw during macros
+end
 
 -- [[ Basic Keymaps ]]
 --  See `:help vim.keymap.set()`
@@ -366,9 +383,9 @@ require('lazy').setup({
         build = 'make',
 
         -- `cond` is a condition used to determine whether this plugin should be
-        -- installed and loaded.
+        -- installed and loaded. Disabled on iSH (make may fail or be slow).
         cond = function()
-          return vim.fn.executable 'make' == 1
+          return vim.fn.executable 'make' == 1 and not require('custom.env').ish_mode
         end,
       },
       { 'nvim-telescope/telescope-ui-select.nvim' },
@@ -398,16 +415,8 @@ require('lazy').setup({
 
       -- [[ Configure Telescope ]]
       -- See `:help telescope` and `:help telescope.setup()`
-      require('telescope').setup {
-        -- You can put your default mappings / updates / etc. in here
-        --  All the info you're looking for is in `:help telescope.setup()`
-        --
-        -- defaults = {
-        --   mappings = {
-        --     i = { ['<c-enter>'] = 'to_fuzzy_refine' },
-        --   },
-        -- },
-        -- pickers = {}
+      local env = require('custom.env')
+      local telescope_opts = {
         extensions = {
           ['ui-select'] = {
             require('telescope.themes').get_dropdown(),
@@ -415,8 +424,29 @@ require('lazy').setup({
         },
       }
 
+      if env.ish_mode then
+        -- iSH: Optimized defaults for performance
+        telescope_opts.defaults = {
+          -- Disable treesitter-based preview highlighting
+          preview = {
+            treesitter = false,
+            filesize_limit = 0.1, -- 100KB limit for preview
+          },
+          -- Use vertical layout (better for iPad screen)
+          layout_strategy = 'vertical',
+          layout_config = {
+            vertical = { width = 0.9, height = 0.9 },
+          },
+        }
+      end
+
+      require('telescope').setup(telescope_opts)
+
       -- Enable Telescope extensions if they are installed
-      pcall(require('telescope').load_extension, 'fzf')
+      -- Only load fzf extension on non-iSH systems
+      if not env.ish_mode then
+        pcall(require('telescope').load_extension, 'fzf')
+      end
       pcall(require('telescope').load_extension, 'ui-select')
 
       -- See `:help telescope.builtin`
@@ -478,7 +508,13 @@ require('lazy').setup({
       -- Automatically install LSPs and related tools to stdpath for Neovim
       { 'williamboman/mason.nvim', config = true }, -- NOTE: Must be loaded before dependants
       'williamboman/mason-lspconfig.nvim',
-      'WhoIsSethDaniel/mason-tool-installer.nvim',
+      {
+        'WhoIsSethDaniel/mason-tool-installer.nvim',
+        -- Disable auto-install on iSH (use manual :MasonInstall --target=linux_x64_gnu)
+        cond = function()
+          return not require('custom.env').ish_mode
+        end,
+      },
 
       -- Useful status updates for LSP.
       -- NOTE: `opts = {}` is the same as calling `require('fidget').setup({})`
@@ -671,26 +707,78 @@ require('lazy').setup({
       --  You can press `g?` for help in this menu.
       require('mason').setup()
 
-      -- You can add other tools here that you want Mason to install
-      -- for you, so that they are available from within Neovim.
-      local ensure_installed = vim.tbl_keys(servers or {})
-      vim.list_extend(ensure_installed, {
-        'stylua', -- Used to format Lua code
-      })
-      require('mason-tool-installer').setup { ensure_installed = ensure_installed }
+      local env = require('custom.env')
 
-      require('mason-lspconfig').setup {
-        handlers = {
-          function(server_name)
-            local server = servers[server_name] or {}
-            -- This handles overriding only values explicitly passed
-            -- by the server configuration above. Useful when disabling
-            -- certain features of an LSP (for example, turning off formatting for ts_ls)
-            server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
-            require('lspconfig')[server_name].setup(server)
+      if env.ish_mode then
+        -- iSH MODE: Create helper command for manual installation with target flag
+        vim.api.nvim_create_user_command('MasonInstallISH', function(opts)
+          vim.cmd('MasonInstall --target=linux_x64_gnu ' .. opts.args)
+        end, {
+          nargs = '+',
+          desc = 'Install Mason package with x64 target for iSH',
+          complete = function(_, _, _)
+            -- Basic completion with common packages
+            return {
+              'lua-language-server',
+              'clangd',
+              'pyright',
+              'texlab',
+              'stylua',
+              'black',
+              'clang-format',
+            }
           end,
-        },
-      }
+        })
+
+        -- Manual LSP setup for iSH - servers must be installed via :MasonInstallISH first
+        local lspconfig = require('lspconfig')
+
+        -- Setup servers that are installed (won't error if not present)
+        local function setup_if_available(server, settings)
+          local ok = pcall(function()
+            lspconfig[server].setup(vim.tbl_deep_extend('force', {
+              capabilities = capabilities,
+            }, settings or {}))
+          end)
+          return ok
+        end
+
+        -- Lua
+        setup_if_available('lua_ls', servers.lua_ls or {})
+        -- C/C++
+        setup_if_available('clangd', {})
+        -- Python
+        setup_if_available('pyright', {})
+        -- LaTeX
+        setup_if_available('texlab', {
+          settings = {
+            texlab = {
+              build = { onSave = false },
+              chktex = { onOpenAndSave = false },
+            },
+          },
+        })
+      else
+        -- NORMAL MODE: Full auto-install setup
+        local ensure_installed = vim.tbl_keys(servers or {})
+        vim.list_extend(ensure_installed, {
+          'stylua', -- Used to format Lua code
+        })
+        require('mason-tool-installer').setup { ensure_installed = ensure_installed }
+
+        require('mason-lspconfig').setup {
+          handlers = {
+            function(server_name)
+              local server = servers[server_name] or {}
+              -- This handles overriding only values explicitly passed
+              -- by the server configuration above. Useful when disabling
+              -- certain features of an LSP (for example, turning off formatting for ts_ls)
+              server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
+              require('lspconfig')[server_name].setup(server)
+            end,
+          },
+        }
+      end
     end,
   },
 
@@ -708,33 +796,48 @@ require('lazy').setup({
         desc = '[F]ormat buffer',
       },
     },
-    opts = {
-      notify_on_error = false,
-      format_on_save = function(bufnr)
-        -- Disable "format_on_save lsp_fallback" for languages that don't
-        -- have a well standardized coding style. You can add additional
-        -- languages here or re-enable it for the disabled ones.
-        local disable_filetypes = { c = true, cpp = true }
-        local lsp_format_opt
-        if disable_filetypes[vim.bo[bufnr].filetype] then
-          lsp_format_opt = 'never'
-        else
-          lsp_format_opt = 'fallback'
-        end
+    opts = function()
+      local env = require('custom.env')
+
+      if env.ish_mode then
+        -- iSH: Disable format-on-save (too slow), keep manual formatting
         return {
-          timeout_ms = 500,
-          lsp_format = lsp_format_opt,
+          notify_on_error = false,
+          format_on_save = false, -- Disable auto-format on iSH
+          formatters_by_ft = {
+            -- Use formatters installed via Mason with --target flag or apk
+            lua = { 'stylua' },
+            python = { 'black' }, -- apk add py3-black or MasonInstallISH black
+            c = { 'clang-format' }, -- apk add clang or MasonInstallISH clang-format
+            cpp = { 'clang-format' },
+          },
         }
-      end,
-      formatters_by_ft = {
-        lua = { 'stylua' },
-        -- Conform can also run multiple formatters sequentially
-        python = { 'isort', 'black' },
-        --
-        -- You can use 'stop_after_first' to run the first available formatter from the list
-        -- javascript = { "prettierd", "prettier", stop_after_first = true },
-      },
-    },
+      else
+        -- Normal: Full auto-format setup
+        return {
+          notify_on_error = false,
+          format_on_save = function(bufnr)
+            local disable_filetypes = { c = true, cpp = true }
+            local lsp_format_opt
+            if disable_filetypes[vim.bo[bufnr].filetype] then
+              lsp_format_opt = 'never'
+            else
+              lsp_format_opt = 'fallback'
+            end
+            return {
+              timeout_ms = 500,
+              lsp_format = lsp_format_opt,
+            }
+          end,
+          formatters_by_ft = {
+            lua = { 'stylua' },
+            python = { 'isort', 'black' },
+            c = { 'clang-format' },
+            cpp = { 'clang-format' },
+          },
+        }
+      end
+    end,
   },
 
   { -- Autocompletion
@@ -927,38 +1030,66 @@ require('lazy').setup({
   },
   { -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
-    build = ':TSUpdate',
+    build = function()
+      -- Only run TSUpdate on non-iSH systems (compilation may fail on iSH)
+      if not require('custom.env').ish_mode then
+        vim.cmd(':TSUpdate')
+      end
+    end,
     main = 'nvim-treesitter.configs', -- Sets main module to use for opts
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
-    opts = {
-      ensure_installed = {
-        'bash',
-        'c',
-        'diff',
-        'html',
-        'lua',
-        'luadoc',
-        'markdown',
-        'markdown_inline',
-        'query',
-        'vim',
-        'vimdoc',
-        'python',
-        'gdscript',
-        'godot_resource',
-        'gdshader',
-      },
-      -- Autoinstall languages that are not installed
-      auto_install = true,
-      highlight = {
-        enable = true,
-        -- Some languages depend on vim's regex highlighting system (such as Ruby) for indent rules.
-        --  If you are experiencing weird indenting issues, add the language to
-        --  the list of additional_vim_regex_highlighting and disabled languages for indent.
-        additional_vim_regex_highlighting = { 'ruby' },
-      },
-      indent = { enable = true, disable = { 'ruby' } },
-    },
+    opts = function()
+      local env = require('custom.env')
+
+      if env.ish_mode then
+        -- iSH: Minimal treesitter config for performance
+        return {
+          ensure_installed = {}, -- Don't auto-install (use pre-installed parsers)
+          auto_install = false, -- CRITICAL: Disable auto-install on iSH
+          highlight = {
+            enable = true,
+            -- Disable for large files on iSH
+            disable = function(_, buf)
+              local max_filesize = 50 * 1024 -- 50 KB
+              local ok, stats = pcall(vim.loop.fs_stat, vim.api.nvim_buf_get_name(buf))
+              if ok and stats and stats.size > max_filesize then
+                return true
+              end
+            end,
+          },
+          indent = { enable = false }, -- Use vim's built-in indent on iSH
+        }
+      else
+        -- Normal: Full config
+        return {
+          ensure_installed = {
+            'bash',
+            'c',
+            'cpp',
+            'diff',
+            'html',
+            'lua',
+            'luadoc',
+            'markdown',
+            'markdown_inline',
+            'query',
+            'vim',
+            'vimdoc',
+            'python',
+            'gdscript',
+            'godot_resource',
+            'gdshader',
+            'latex',
+          },
+          auto_install = true,
+          highlight = {
+            enable = true,
+            additional_vim_regex_highlighting = { 'ruby', 'latex' },
+          },
+          indent = { enable = true, disable = { 'ruby' } },
+        }
+      end
+    end,
     -- There are additional nvim-treesitter modules that you can use to interact
     -- with nvim-treesitter. You should go explore a few and see what interests you:
     --

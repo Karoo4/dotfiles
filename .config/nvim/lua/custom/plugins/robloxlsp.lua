@@ -1,3 +1,13 @@
+-- Roblox LSP configuration
+-- Disabled on iSH (Roblox development not practical on iPad)
+
+local env = require('custom.env')
+
+-- Return empty table on iSH to disable this plugin
+if env.ish_mode then
+  return {}
+end
+
 return {
   {
     'neovim/nvim-lspconfig',
