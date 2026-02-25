@@ -46,6 +46,17 @@ return {
     build = ':UpdateRemotePlugins',
   },
 
+  -- notebook.nvim: .ipynb file editing
+  {
+    'meatballs/notebook.nvim',
+    opts = {
+      insert_blank_line = true,
+      show_index = true,
+      show_cell_type = true,
+      virtual_text_style = { fg = 'lightblue', italic = true },
+    },
+  },
+
   -- autopairs: Keep (lightweight)
   {
     'windwp/nvim-autopairs',
