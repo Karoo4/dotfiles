@@ -44,6 +44,17 @@ return {
     'benlubas/molten-nvim',
     version = '^1.0.0',
     build = ':UpdateRemotePlugins',
+    keys = {
+      { '<leader>mi', ':MoltenInit<CR>', desc = 'Molten Init' },
+      { '<leader>ml', ':MoltenEvaluateLine<CR>', desc = 'Molten Run line' },
+      { '<leader>mr', ':MoltenReevaluateCell<CR>', desc = 'Molten Re-run cell' },
+      { '<leader>mv', ':<C-u>MoltenEvaluateVisual<CR>gv', mode = 'v', desc = 'Molten Run selection' },
+      { '<leader>mn', ':MoltenNext<CR>', desc = 'Molten Next cell' },
+      { '<leader>mp', ':MoltenPrev<CR>', desc = 'Molten Prev cell' },
+      { '<leader>mo', ':MoltenShowOutput<CR>', desc = 'Molten Show output' },
+      { '<leader>mh', ':MoltenHideOutput<CR>', desc = 'Molten Hide output' },
+      { '<leader>md', ':MoltenDelete<CR>', desc = 'Molten Delete cell' },
+    },
   },
 
   -- notebook.nvim: .ipynb file editing
