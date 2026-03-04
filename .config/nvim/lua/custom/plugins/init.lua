@@ -150,12 +150,25 @@ return {
   {
     'stevearc/oil.nvim',
     dependencies = { 'nvim-tree/nvim-web-devicons' },
+    keys = {
+      { '-', '<CMD>Oil<CR>', desc = 'Open parent directory in Oil' },
+      { '<leader>om', '<CMD>Oil ~/multipass/primary<CR>', desc = 'Oil: Multipass primary' },
+      {
+        '<leader>ms',
+        function()
+          vim.cmd('silent !tmux split-window -h "multipass shell primary"')
+        end,
+        desc = 'Multipass shell in tmux pane',
+      },
+    },
     config = function()
       require('oil').setup({
         silence_scp_warning = true,
         view_options = {
           show_hidden = true,
         },
+        -- Refresh on focus for sshfs mounts
+        watch_for_changes = true,
       })
     end,
   },
