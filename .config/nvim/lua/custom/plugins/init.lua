@@ -149,8 +149,15 @@ return {
   -- oil.nvim: File explorer that lets you edit your filesystem like a buffer
   {
     'stevearc/oil.nvim',
-    opts = {},
     dependencies = { 'nvim-tree/nvim-web-devicons' },
+    config = function()
+      require('oil').setup({
+        silence_scp_warning = true,
+        view_options = {
+          show_hidden = true,
+        },
+      })
+    end,
   },
 
   -- autopairs: Keep (lightweight)
