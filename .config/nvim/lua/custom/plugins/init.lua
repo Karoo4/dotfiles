@@ -39,33 +39,118 @@ return {
     },
   },
 
+  -- image.nvim: Image rendering in terminal (requires Kitty terminal)
+  {
+    '3rd/image.nvim',
+    cond = not env.ish_mode,
+    opts = {
+      backend = 'kitty',
+      integrations = {
+        markdown = { enabled = false },
+        neorg = { enabled = false },
+      },
+      max_width = 100,
+      max_height = 20,
+      max_height_window_percentage = 50,
+      max_width_window_percentage = nil,
+      window_overlap_clear_enabled = true,
+      window_overlap_clear_ft_ignore = { 'cmp_menu', 'cmp_docs', '' },
+    },
+  },
+
   -- molten-nvim: Jupyter notebook support
   {
     'benlubas/molten-nvim',
     version = '^1.0.0',
     build = ':UpdateRemotePlugins',
+    dependencies = { '3rd/image.nvim' },
     keys = {
-      { '<leader>mi', ':MoltenInit<CR>', desc = 'Molten Init' },
-      { '<leader>ml', ':MoltenEvaluateLine<CR>', desc = 'Molten Run line' },
-      { '<leader>mr', ':MoltenReevaluateCell<CR>', desc = 'Molten Re-run cell' },
-      { '<leader>mv', ':<C-u>MoltenEvaluateVisual<CR>gv', mode = 'v', desc = 'Molten Run selection' },
-      { '<leader>mn', ':MoltenNext<CR>', desc = 'Molten Next cell' },
-      { '<leader>mp', ':MoltenPrev<CR>', desc = 'Molten Prev cell' },
-      { '<leader>mo', ':MoltenShowOutput<CR>', desc = 'Molten Show output' },
-      { '<leader>mh', ':MoltenHideOutput<CR>', desc = 'Molten Hide output' },
-      { '<leader>md', ':MoltenDelete<CR>', desc = 'Molten Delete cell' },
+      { '<leader>ji', ':MoltenInit<CR>', desc = 'Molten Init kernel' },
+      { '<leader>jl', ':MoltenEvaluateLine<CR>', desc = 'Molten Evaluate line' },
+      { '<leader>jv', ':<C-u>MoltenEvaluateVisual<CR>gv', mode = 'v', desc = 'Molten Evaluate visual' },
+      { '<leader>jc', ':MoltenReevaluateCell<CR>', desc = 'Molten Re-evaluate cell' },
+      { '<leader>jd', ':MoltenDelete<CR>', desc = 'Molten Delete cell' },
+      { '<leader>jo', ':MoltenShowOutput<CR>', desc = 'Molten Show output' },
+      { '<leader>jq', ':noautocmd MoltenEnterOutput<CR>', desc = 'Molten Enter output' },
+      { '<leader>jh', ':MoltenHideOutput<CR>', desc = 'Molten Hide output' },
+      { '<leader>jx', ':MoltenInterrupt<CR>', desc = 'Molten Interrupt' },
+      { '<leader>jr', ':MoltenRestart<CR>', desc = 'Molten Restart kernel' },
+      { '<leader>jn', ':MoltenNext<CR>', desc = 'Molten Next cell' },
+      { '<leader>jp', ':MoltenPrev<CR>', desc = 'Molten Prev cell' },
     },
+    init = function()
+      vim.g.molten_auto_open_output = true
+      vim.g.molten_image_provider = 'none'
+      vim.g.molten_virt_text_output = false
+      vim.g.molten_wrap_output = true
+      vim.g.molten_auto_image_popup = true -- Auto-open images with system viewer
+    end,
   },
 
-  -- notebook.nvim: .ipynb file editing
+  -- notebook.nvim: .ipynb file editing with Molten integration
   {
     'meatballs/notebook.nvim',
+    dependencies = { 'benlubas/molten-nvim' },
     opts = {
       insert_blank_line = true,
       show_index = true,
       show_cell_type = true,
       virtual_text_style = { fg = 'lightblue', italic = true },
     },
+    config = function(_, opts)
+      local notebook = require('notebook')
+      notebook.setup(opts)
+
+      local api = require('notebook.api')
+      local settings = require('notebook.settings')
+
+      -- Run current notebook cell with Molten
+      local function run_cell()
+        local line = vim.fn.line('.')
+        local extmark, cell_id = api.current_extmark(line)
+        if extmark == nil then
+          vim.notify('Not in a notebook cell', vim.log.levels.WARN)
+          return
+        end
+        local buffer = vim.api.nvim_get_current_buf()
+        local cell = settings.extmarks[buffer] and settings.extmarks[buffer][cell_id]
+        if cell and cell.cell_type ~= 'code' then
+          vim.notify('Not a code cell', vim.log.levels.WARN)
+          return
+        end
+        local start_line = extmark[1] + 1
+        local end_line = extmark[3].end_row
+        vim.fn.MoltenEvaluateRange(start_line, end_line)
+      end
+
+      -- Run all code cells
+      local function run_all_cells()
+        local buffer = vim.api.nvim_get_current_buf()
+        local extmarks = settings.extmarks[buffer]
+        if not extmarks then return end
+        for id, cell in pairs(extmarks) do
+          if cell.cell_type == 'code' then
+            local extmark = vim.api.nvim_buf_get_extmark_by_id(
+              0, settings.plugin_namespace, id, { details = true }
+            )
+            local start_line = extmark[1] + 1
+            local end_line = extmark[3].end_row
+            vim.fn.MoltenEvaluateRange(start_line, end_line)
+          end
+        end
+      end
+
+      -- Keybinds for notebook cells
+      vim.keymap.set('n', '<leader>jj', run_cell, { desc = 'Molten Run notebook cell' })
+      vim.keymap.set('n', '<leader>ja', run_all_cells, { desc = 'Molten Run all cells' })
+    end,
+  },
+
+  -- oil.nvim: File explorer that lets you edit your filesystem like a buffer
+  {
+    'stevearc/oil.nvim',
+    opts = {},
+    dependencies = { 'nvim-tree/nvim-web-devicons' },
   },
 
   -- autopairs: Keep (lightweight)
