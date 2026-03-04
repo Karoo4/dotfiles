@@ -167,8 +167,17 @@ return {
         view_options = {
           show_hidden = true,
         },
-        -- Refresh on focus for sshfs mounts
-        watch_for_changes = true,
+        keymaps = {
+          ['<C-r>'] = 'actions.refresh',
+        },
+      })
+
+      -- Auto-refresh Oil buffer when gaining focus (for sshfs mounts)
+      vim.api.nvim_create_autocmd('FocusGained', {
+        pattern = 'oil://*',
+        callback = function()
+          require('oil.actions').refresh.callback()
+        end,
       })
     end,
   },
